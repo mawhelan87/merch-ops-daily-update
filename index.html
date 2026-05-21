@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Merch Ops Daily Update</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #13131a;
+  --surface2: #1a1a24;
+  --surface3: #22222e;
+  --border: #2a2a3a;
+  --text: #e8e8f0;
+  --text2: #8888a0;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --red: #ef4444;
+  --red-bg: rgba(239,68,68,0.12);
+  --orange: #f59e0b;
+  --orange-bg: rgba(245,158,11,0.12);
+  --green: #22c55e;
+  --green-bg: rgba(34,197,94,0.12);
+  --blue: #3b82f6;
+  --blue-bg: rgba(59,130,246,0.12);
+  --tab-h: 68px;
+  --status-h: 44px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; overflow:hidden; background:#000; font-family:'Inter',system-ui,sans-serif; color:var(--text); }
+
+/* PASSWORD SCREEN */
+#lockScreen {
+  position:fixed; inset:0; z-index:9999;
+  background: var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  opacity:1; transition: opacity .4s, transform .4s;
+}
+#lockScreen.hidden { opacity:0; pointer-events:none; transform:scale(1.05); }
+#lockScreen .lock-icon {
+  width:56px; height:56px; border-radius:50%;
+  background: linear-gradient(135deg, var(--accent), #a855f7);
+  display:flex; align-items:center; justify-content:center;
+  margin-bottom:24px; font-size:24px;
+}
+#lockScreen h1 { font-size:20px; font-weight:700; margin-bottom:6px; letter-spacing:-.3px; }
+#lockScreen p { font-size:13px; color:var(--text2); margin-bottom:28px; }
+#lockScreen input {
+  width:260px; padding:14px 18px; border-radius:14px;
+  background:var(--surface2); border:1px solid var(--border);
+  color:var(--text); font-size:15px; font-family:inherit;
+  text-align:center; outline:none; transition: border .2s;
+}
+#lockScreen input:focus { border-color:var(--accent); }
+#lockScreen input.error { border-color:var(--red); animation: shake .4s; }
+#lockScreen .lock-sub { font-size:11px; color:var(--text2); margin-top:14px; opacity:.5; }
+
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+
+/* DESKTOP PHONE FRAME */
+.phone-frame {
+  display:none;
+}
+@media (min-width:481px) {
+  body { display:flex; align-items:center; justify-content:center; background:#08080d; }
+  .phone-frame {
+    display:block; position:relative;
+    width:390px; height:844px;
+    border-radius:44px;
+    border:3px solid #2a2a3a;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.05), 0 40px 100px rgba(0,0,0,.6), 0 0 80px rgba(99,102,241,.08);
+    overflow:hidden; background:var(--bg);
+  }
+  .phone-frame::before {
+    content:''; position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:126px; height:34px; background:#000; border-radius:0 0 18px 18px; z-index:100;
+  }
+  #app { width:100%; height:100%; }
+}
+
+/* APP SHELL */
+#app {
+  position:relative; width:100vw; height:100vh;
+  background:var(--bg); overflow:hidden;
+  display:flex; flex-direction:column;
+}
+@media (min-width:481px) {
+  #app { width:100%; height:100%; }
+}
+
+/* STATUS BAR */
+.status-bar {
+  height:var(--status-h); padding:0 24px;
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:13px; font-weight:600; flex-shrink:0;
+  position:relative; z-index:50;
+}
+.status-bar .time { font-variant-numeric:tabular-nums; }
+.status-bar .right { display:flex; gap:6px; align-items:center; font-size:11px; color:var(--text2); }
+
+/* HEADER */
+.app-header {
+  padding:0 20px 12px; flex-shrink:0;
+}
+.app-header h1 {
+  font-size:22px; font-weight:800; letter-spacing:-.5px;
+  background: linear-gradient(135deg, #e8e8f0 30%, var(--accent2));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.app-header .date { font-size:12px; color:var(--text2); margin-top:2px; font-weight:500; }
+
+/* CONTENT AREA */
+.content-area {
+  flex:1; overflow-y:auto; overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  padding:0 16px 20px;
+  scroll-behavior:smooth;
+}
+.content-area::-webkit-scrollbar { display:none; }
+
+/* TAB BAR */
+.tab-bar {
+  height:var(--tab-h); padding-bottom:var(--safe-b);
+  background:rgba(13,13,20,.92); backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-around;
+  flex-shrink:0; position:relative; z-index:50;
+}
+.tab-btn {
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  background:none; border:none; color:var(--text2); cursor:pointer;
+  font-size:10px; font-weight:600; font-family:inherit;
+  padding:6px 0; min-width:56px; transition: color .15s;
+}
+.tab-btn .tab-icon { font-size:20px; transition: transform .15s; }
+.tab-btn.active { color:var(--accent2); }
+.tab-btn.active .tab-icon { transform:scale(1.15); }
+
+/* TAB PANELS */
+.tab-panel { display:none; }
+.tab-panel.active { display:block; animation: fadeUp .25s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+/* STAT CARDS */
+.stat-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
+.stat-card {
+  background:var(--surface); border-radius:14px; padding:14px;
+  border:1px solid var(--border); text-align:center;
+}
+.stat-card .num { font-size:28px; font-weight:800; font-variant-numeric:tabular-nums; }
+.stat-card .label { font-size:10px; color:var(--text2); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+.stat-card.purple .num { color:var(--accent2); }
+.stat-card.orange .num { color:var(--orange); }
+.stat-card.green .num { color:var(--green); }
+
+/* SECTION LABEL */
+.section-label {
+  font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px;
+  color:var(--text2); margin:18px 0 10px; padding-left:2px;
+}
+
+/* ITEM CARDS */
+.item-card {
+  background:var(--surface); border-radius:14px; padding:14px 16px;
+  border:1px solid var(--border); margin-bottom:10px;
+  cursor:pointer; transition: transform .1s, border-color .15s;
+  position:relative; overflow:hidden;
+}
+.item-card:active { transform:scale(.98); }
+.item-card .card-top { display:flex; align-items:center; gap:10px; }
+.item-card .time-badge {
+  font-size:11px; font-weight:700; font-family:'JetBrains Mono',monospace;
+  color:var(--accent2); white-space:nowrap; min-width:52px;
+}
+.item-card .card-title { font-size:14px; font-weight:600; flex:1; line-height:1.35; }
+.item-card .card-sub { font-size:12px; color:var(--text2); margin-top:4px; line-height:1.4; }
+.item-card .card-detail {
+  max-height:0; overflow:hidden; transition: max-height .3s ease, padding .3s;
+  font-size:12px; color:var(--text2); line-height:1.55;
+}
+.item-card.expanded .card-detail { max-height:600px; padding-top:10px; }
+.item-card .expand-dot {
+  position:absolute; right:14px; top:14px;
+  width:6px; height:6px; border-radius:50%;
+  background:var(--text2); opacity:.3; transition: opacity .15s;
+}
+.item-card.expanded .expand-dot { opacity:0; }
+
+/* PRIORITY TAGS */
+.priority-tag {
+  display:inline-block; padding:3px 8px; border-radius:6px;
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px;
+  margin-right:6px;
+}
+.priority-tag.urgent { background:var(--red-bg); color:var(--red); }
+.priority-tag.review { background:var(--orange-bg); color:var(--orange); }
+.priority-tag.resolved { background:var(--green-bg); color:var(--green); }
+.priority-tag.info { background:var(--blue-bg); color:var(--blue); }
+
+.item-card.border-red { border-left:3px solid var(--red); }
+.item-card.border-orange { border-left:3px solid var(--orange); }
+.item-card.border-green { border-left:3px solid var(--green); }
+.item-card.border-blue { border-left:3px solid var(--blue); }
+
+/* TEAM CARD */
+.team-card {
+  background:var(--surface); border-radius:14px; padding:14px 16px;
+  border:1px solid var(--border); margin-bottom:10px;
+  cursor:pointer; transition: transform .1s;
+}
+.team-card:active { transform:scale(.98); }
+.team-card .team-top { display:flex; align-items:center; gap:12px; }
+.team-card .avatar {
+  width:36px; height:36px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:700; flex-shrink:0;
+}
+.team-card .team-name { font-size:14px; font-weight:600; }
+.team-card .team-role { font-size:11px; color:var(--text2); }
+.team-card .team-detail {
+  max-height:0; overflow:hidden; transition: max-height .3s ease;
+  font-size:12px; color:var(--text2); line-height:1.55;
+}
+.team-card.expanded .team-detail { max-height:400px; padding-top:10px; }
+
+/* WIN CARD */
+.win-card {
+  background: linear-gradient(135deg, rgba(34,197,94,.06), rgba(99,102,241,.06));
+  border-radius:14px; padding:14px 16px;
+  border:1px solid rgba(34,197,94,.15); margin-bottom:10px;
+  cursor:pointer; transition: transform .1s;
+}
+.win-card:active { transform:scale(.98); }
+.win-card .win-icon { font-size:18px; margin-bottom:6px; }
+.win-card .win-title { font-size:14px; font-weight:600; margin-bottom:3px; }
+.win-card .win-sub { font-size:12px; color:var(--text2); line-height:1.4; }
+.win-card .win-detail {
+  max-height:0; overflow:hidden; transition: max-height .3s ease;
+  font-size:12px; color:var(--text2); line-height:1.55;
+}
+.win-card.expanded .win-detail { max-height:400px; padding-top:10px; }
+
+/* OVERLAY SHEET */
+.overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.6);
+  backdrop-filter:blur(4px); z-index:200;
+  display:none; align-items:flex-end; justify-content:center;
+}
+.overlay.show { display:flex; }
+.overlay .sheet {
+  background:var(--surface); border-radius:20px 20px 0 0;
+  width:100%; max-width:390px; max-height:80vh;
+  padding:20px 20px 40px; overflow-y:auto;
+  animation: slideUp .3s ease;
+}
+@keyframes slideUp { from { transform:translateY(100%); } }
+.sheet .sheet-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 16px; }
+.sheet h3 { font-size:17px; font-weight:700; margin-bottom:12px; }
+.sheet p { font-size:13px; color:var(--text2); line-height:1.6; }
+.sheet .sheet-tag { margin-bottom:10px; }
+</style>
+</head>
+<body>
+
+<!-- PASSWORD SCREEN -->
+<div id="lockScreen">
+  <div class="lock-icon">🔒</div>
+  <h1>Merch Ops</h1>
+  <p>Daily Update · Secured</p>
+  <input type="password" id="pwInput" placeholder="Enter password" autocomplete="off">
+  <div class="lock-sub">mawhelan87.github.io</div>
+</div>
+
+<!-- PHONE FRAME (desktop only) -->
+<div class="phone-frame">
+<div id="app">
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <span class="time" id="clock">--:--</span>
+    <span class="right">
+      <span>5G</span>
+      <span>🔋</span>
+    </span>
+  </div>
+
+  <!-- HEADER -->
+  <div class="app-header">
+    <h1>Daily Update</h1>
+    <div class="date">Thursday, May 21 2026</div>
+  </div>
+
+  <!-- CONTENT AREA -->
+  <div class="content-area" id="contentArea">
+
+    <!-- 📅 TODAY -->
+    <div class="tab-panel active" id="panelToday">
+      <div class="stat-row">
+        <div class="stat-card purple"><div class="num">8</div><div class="label">Meetings</div></div>
+        <div class="stat-card orange"><div class="num">6</div><div class="label">Actions</div></div>
+        <div class="stat-card green"><div class="num">4</div><div class="label">Wins</div></div>
+      </div>
+
+      <div class="section-label">Today's Schedule</div>
+
+      <div class="item-card" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <div class="card-top">
+          <span class="time-badge">10:00</span>
+          <span class="card-title">NSL Working Group</span>
+        </div>
+        <div class="card-sub">Org: Lucca Della Libera · 30min</div>
+        <div class="card-detail">Recurring meeting to discuss new state launch updates and deliverables. Large cross-functional group including Merch Ops, Trading, Compliance, Product & Eng. Location: EDI Brig O'Doon / NY Commanders room + Zoom.</div>
+      </div>
+
+      <div class="item-card" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <div class="card-top">
+          <span class="time-badge">10:00</span>
+          <span class="card-title">Homepage Sync</span>
+        </div>
+        <div class="card-sub">Org: Niall Connolly · 15min · Tentative</div>
+        <div class="card-detail">Quick sync with Niall, Mahima, Darren, Aashini, Bradley, Will, Cydney, Collin, Ryan H, Shane. Covers homepage merchandising alignment across US & international.</div>
+      </div>
+
+      <div class="item-card" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <div class="card-top">
+          <span class="time-badge">10:30</span>
+          <span class="card-title">Merch Ops x Canada Alignment</span>
+        </div>
+        <div class="card-sub">Org: Aashini Desai · 30min</div>
+        <div class="card-detail">Alignment session with Aashini, Mason Gallina, Niall, Bradley Korrub, Chantel Trinh. Canada merch strategy discussion — Parlay Hub decomm running separate A/B test for Canada per latest product notes.</div>
+      </div>
+
+      <div class="item-card" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <div class="card-top">
+          <span class="time-badge">11:00</span>
+          <span class="card-title">Peakon Manager Training</span>
+        </div>
+        <div class="card-sub">Org: Talent & Learning · 45min</div>
+        <div class="card-detail">Navigating Your Dashboard + Insights. Post-Peakon Employee Engagement Survey training for managers. Rooms reserved across ATL, BH, JC, NYC, Edinburgh.</div>
+      </div>
+
+      <div class="item-card" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <div class="card-top">
+          <span class="time-badge">12:00</span>
+          <span class="card-title">No Available (Focus Time)</span>
+        </div>
+        <div class="card-sub">Self-blocked · 1hr</div>
+        <div class="card-detail">Blocked focus time. Use for clearing action items, prepping for afternoon 1:1s, reviewing SBK→CAS performance update from Mike Castor.</div>
+      </div>
+
+      <div class="item-card" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <div class="card-top">
+          <span class="time-badge">13:00</span>
+          <span class="card-title">SBK360 Bi-weekly</span>
+        </div>
+        <div class="card-sub">Org: Dhara Trivedi · 30min · Tentative</div>
+        <div class="card-detail">Sportsbook-wide bi-weekly covering all pillars. Updated agenda & slide decks in shared folder. Flexible agenda — if your team wants to add a topic, flag it.</div>
+      </div>
+
+      <div class="item-card" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <div class="card-top">
+          <span class="time-badge">13:30</span>
+          <span class="card-title">Matt & Will 1:1</span>
+        </div>
+        <div class="card-sub">You + Will Eklund · 30min</div>
+        <div class="card-detail">Regular 1:1 with Will. Topics to cover: PPM Scorecard dashboard recognition, SGP+ June 8 rollout prep, parlay module leg restrictions perf testing update, WCF injury implications for cards.</div>
+      </div>
+
+      <div class="item-card" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <div class="card-top">
+          <span class="time-badge">14:30</span>
+          <span class="card-title">Matt & Aashini 1:1</span>
+        </div>
+        <div class="card-sub">You + Aashini Desai · 30min</div>
+        <div class="card-detail">Regular 1:1 with Aashini. Topics to cover: Canada alignment follow-up, Soccer Sport Page WC workaround (need her help routing All Sports soccer link), World Cup competition page readiness.</div>
+      </div>
+
+      <div class="item-card" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <div class="card-top">
+          <span class="time-badge">16:00</span>
+          <span class="card-title">Mid-Year Conversations Training</span>
+        </div>
+        <div class="card-sub">Org: Talent & Learning · 45min · Tentative</div>
+        <div class="card-detail">Short training on FanDuel's lightweight mid-year conversation process. Covers how to lead effective, growth-focused check-ins using Radical Candor framework. Good prep for upcoming direct report conversations.</div>
+      </div>
+
+      <div class="section-label">Tomorrow Preview</div>
+
+      <div class="item-card" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <div class="card-top">
+          <span class="time-badge">10:00</span>
+          <span class="card-title">All Employees: Mid-Year Conversations</span>
+        </div>
+        <div class="card-sub">Org: Talent & Learning · 45min · Fri May 22</div>
+        <div class="card-detail">Company-wide session on mid-year conversations — employee-facing counterpart to today's manager training. Good awareness for how your team will approach these.</div>
+      </div>
+
+      <div class="item-card" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <div class="card-top">
+          <span class="time-badge">10:00</span>
+          <span class="card-title">SBK TBM Pillar — Monthly Show & Tell</span>
+        </div>
+        <div class="card-sub">Org: Purity Gitau · 1hr · Fri May 22</div>
+        <div class="card-detail">Monthly Show & Tell for Sportsbook Transform Bet Merchandizing Pillar. Agenda in Confluence. Good visibility opportunity for Merch Ops — consider flagging PPM Scorecard or SGP+ readiness.</div>
+      </div>
+    </div>
+
+    <!-- 🎯 ACTIONS -->
+    <div class="tab-panel" id="panelActions">
+      <div class="section-label">Urgent</div>
+
+      <div class="item-card border-red" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag urgent">Urgent</span>
+        <div class="card-title" style="margin-top:8px">Racing Ops Shift Authorize — Hours Mismatch</div>
+        <div class="card-sub">Mel Marso flagged discrepancy in DayForce hours vs what you submitted</div>
+        <div class="card-detail">Melissa replied to your shift authorize request for Racing Ops (email to Harry Catalani & Mel). She sees different hours in DayForce than what you listed. Need to reconcile and confirm correct hours ASAP.</div>
+      </div>
+
+      <div class="item-card border-red" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag urgent">Urgent</span>
+        <div class="card-title" style="margin-top:8px">WCF G3 Injury News — SGP Card Guidance</div>
+        <div class="card-sub">Multiple OKC/SAS injuries impacting parlay card building</div>
+        <div class="card-detail">Trading shared extensive injury notes: J-Dub (hamstring, 75% lean OUT), Fox (50/50, ruled OUT G2), Harper (hamstring, slight lean IN), Ajay Mitchell (quad, 50/50). Cards being built for WCF G3 should avoid using these players in SGPs until status confirmed. Will Schleichert forwarded handover notes — ensure team is aligned.</div>
+      </div>
+
+      <div class="section-label">Review</div>
+
+      <div class="item-card border-orange" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag review">Review</span>
+        <div class="card-title" style="margin-top:8px">Soccer Sport Page Rollout — Pushed Post-World Cup</div>
+        <div class="card-sub">Wyn Diaz shared workaround plan in #merch_planning</div>
+        <div class="card-detail">Performance issues found on the 'featured' tab of the new soccer page. Decision: push full rollout to after World Cup. Workaround for first week of June: point Pop Nav soccer icon to WC Competition Page, update "More soccer" links, update Soccer link in All Sports. Michael Thompson & Aashini needed for the FanDalf-managed All Sports update. WC Competition page is live and ready.</div>
+      </div>
+
+      <div class="item-card border-orange" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag review">Review</span>
+        <div class="card-title" style="margin-top:8px">Poker Pop Nav Icon Request</div>
+        <div class="card-sub">Your post in #merch_x_gtm — awaiting feedback</div>
+        <div class="card-detail">You flagged the Poker team's request for a Poker Pop Nav Icon on SBK app in NJ, MI, PA (behind Casino). Positioned at the back so minimal sports impact. Opened for concerns or pushback from GTM channel — monitor for responses.</div>
+      </div>
+
+      <div class="item-card border-orange" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag review">Review</span>
+        <div class="card-title" style="margin-top:8px">SBK → CAS April Performance Update</div>
+        <div class="card-sub">Forwarded by Mike Castor with attachment</div>
+        <div class="card-detail">Sinan Kocabas prepared the April Sportsbook to Casino performance update. Mike Castor forwarded to your wider group including Daniele Phillips, Dan Katz, Dylan DeHond, Stephen Cruz, and others. Review the data and consider implications for Merch Ops cross-sell strategy.</div>
+      </div>
+
+      <div class="section-label">Info</div>
+
+      <div class="item-card border-blue" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag info">Info</span>
+        <div class="card-title" style="margin-top:8px">SGP+ Launch June 8 — Feature Flags Pending</div>
+        <div class="card-sub">Will Schleichert shared product call updates</div>
+        <div class="card-detail">From parlay strategy franchise channel: SGP+ can be offered starting June 8 (app release date). Parlays & SGP can run simultaneously on homepage — just waiting for feature flag updates from Nelson Campinho. Legs/odds restrictions easing — performance testing hoped to complete by end of this week. PPM minimum legs drop to 3 also pending perf testing from Raquel Ferreira.</div>
+      </div>
+
+      <div class="item-card border-blue" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag info">Info</span>
+        <div class="card-title" style="margin-top:8px">Combined SGP + Popular Tab Experiment — Rolled Back</div>
+        <div class="card-sub">Drew Budinsky posted decision in #sbk-experimentation-community</div>
+        <div class="card-detail">The experiment combining SGP and Popular tabs on MLB event pages led to a significant decrease in parlay and SGP/+ bet mix with no lift to conversion or engagement. Decision: Rollback. Next steps: revisit with NFL or NCAAF where more non-SGP markets could offset bet mix impact.</div>
+      </div>
+
+      <div class="item-card border-blue" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag info">Info</span>
+        <div class="card-title" style="margin-top:8px">F1 Monaco Pinning Request — June 7</div>
+        <div class="card-sub">Katie Forman asked in #merch_x_gtm</div>
+        <div class="card-detail">GTM request: pin F1 for Monaco GP on Sunday June 7 (9AM ET) — ideally also Saturday night after other sports conclude. Add to scheduling calendar.</div>
+      </div>
+
+      <div class="item-card border-blue" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag info">Info</span>
+        <div class="card-title" style="margin-top:8px">Alberta Added to Canada SBK Services</div>
+        <div class="card-sub">Connor Lacy PR merged — cron warm jobs now include AB</div>
+        <div class="card-detail">PAS-1428: Alberta (AB) has been added to supported Canada regions for cron warm jobs in sportsbook-services. Part of the broader Canada expansion — relevant for your Canada alignment meeting today.</div>
+      </div>
+    </div>
+
+    <!-- 👥 TEAM -->
+    <div class="tab-panel" id="panelTeam">
+      <div class="section-label">Direct Reports</div>
+
+      <div class="team-card" onclick="toggle(this)">
+        <div class="team-top">
+          <div class="avatar" style="background:linear-gradient(135deg,#6366f1,#818cf8)">WE</div>
+          <div><div class="team-name">Will Eklund</div><div class="team-role">Merch Ops Lead</div></div>
+        </div>
+        <div class="team-detail">
+          <strong>Focus Today:</strong> 1:1 with you at 1:30PM. Celebrated Shawn Brooker's 13-year anniversary in #merchops today. Aligned with parlay franchise on SGP+ rollout and WCF injury guidance for card building.<br><br>
+          <strong>Key Items:</strong> PPM Scorecard dashboard (Will Schleichert's build) getting great traction, SGP+ feature flag enablement coordination, WCF G3 card guidance dissemination to team.
+        </div>
+      </div>
+
+      <div class="team-card" onclick="toggle(this)">
+        <div class="team-top">
+          <div class="avatar" style="background:linear-gradient(135deg,#22c55e,#4ade80)">AD</div>
+          <div><div class="team-name">Aashini Desai</div><div class="team-role">Merch Ops — Canada & Intl</div></div>
+        </div>
+        <div class="team-detail">
+          <strong>Focus Today:</strong> Canada Alignment meeting at 10:30 then 1:1 with you at 2:30PM. Leading on Canada merch strategy and international alignment with Niall Connolly.<br><br>
+          <strong>Key Items:</strong> Soccer Sport Page workaround needs her help routing All Sports soccer link via FanDalf. Alberta added to SBK services (PAS-1428). Separate Parlay Hub A/B test planned for Canada.
+        </div>
+      </div>
+
+      <div class="team-card" onclick="toggle(this)">
+        <div class="team-top">
+          <div class="avatar" style="background:linear-gradient(135deg,#f59e0b,#fbbf24)">MT</div>
+          <div><div class="team-name">Michael Thompson</div><div class="team-role">Merch Ops — US Ops</div></div>
+        </div>
+        <div class="team-detail">
+          <strong>Focus Today:</strong> Celebrating Glen Belekis' birthday with the team in #merchops. Engaged in day-to-day US merch operations.<br><br>
+          <strong>Key Items:</strong> Needed on Soccer Sport Page workaround — FanDalf All Sports update. Arsenal EPL championship win generating good team energy. Monitoring WCF injuries for live merch impact.
+        </div>
+      </div>
+
+      <div class="team-card" onclick="toggle(this)">
+        <div class="team-top">
+          <div class="avatar" style="background:linear-gradient(135deg,#ef4444,#f87171)">CR</div>
+          <div><div class="team-name">Chad Rowley</div><div class="team-role">Merch Ops — Parlay Strategy</div></div>
+        </div>
+        <div class="team-detail">
+          <strong>Focus Today:</strong> Building WCF G3 parlay cards with injury-adjusted player selections. Engaged in parlay module strategy.<br><br>
+          <strong>Key Items:</strong> Checking NBA & Soccer market issues (reported resolved per Simon Stasiak notes). Excited about PPM Scorecard — called out that the featured player carousel "actually works." Key contributor to parlay card volume.
+        </div>
+      </div>
+
+      <div class="section-label">Key Team Members</div>
+
+      <div class="team-card" onclick="toggle(this)">
+        <div class="team-top">
+          <div class="avatar" style="background:linear-gradient(135deg,#3b82f6,#60a5fa)">ZJ</div>
+          <div><div class="team-name">Zack Jenis</div><div class="team-role">MerchOps Lead / Strategy</div></div>
+        </div>
+        <div class="team-detail">
+          <strong>Focus:</strong> Driving team recognition — posted MVP awards for Will Schleichert (PPM Scorecard) and Dylan Mendelowitz (Sanity discipline). Shared PPM Weekly Scorecard to wider #merch_planning audience. Celebrating Glen's birthday. Experiment POC on Combined SGP/Popular tab rollback.<br><br>
+          <strong>Watch:</strong> High visibility on experimentation decisions and AI-powered tool adoption.
+        </div>
+      </div>
+
+      <div class="team-card" onclick="toggle(this)">
+        <div class="team-top">
+          <div class="avatar" style="background:linear-gradient(135deg,#a855f7,#c084fc)">WS</div>
+          <div><div class="team-name">Will Schleichert</div><div class="team-role">Merch Ops — Parlay Module</div></div>
+        </div>
+        <div class="team-detail">
+          <strong>Focus:</strong> Built the Popular Parlay Module Weekly Scorecard — a standout internal tool getting wide recognition across the org. Covers CVR, handle, GGR, avg $/bet, featured players leaderboard, and Wins of the Week. Forwarding WCF injury notes for card builders.<br><br>
+          <strong>Highlight:</strong> Named MVP of the Day by Zack. Dashboard shared to #merch_planning and getting positive feedback from Ryan Engler and others.
+        </div>
+      </div>
+
+      <div class="team-card" onclick="toggle(this)">
+        <div class="team-top">
+          <div class="avatar" style="background:linear-gradient(135deg,#14b8a6,#2dd4bf)">DM</div>
+          <div><div class="team-name">Dylan Mendelowitz</div><div class="team-role">Merch Ops — Sanity / Overnight</div></div>
+        </div>
+        <div class="team-detail">
+          <strong>Focus:</strong> Named MVP of the Day (May 19) for driving team-wide discipline on nightly Sanity setup — clear checklist covering Carousel, auto-pub, combos in pop nav. Called out misses constructively, offered himself as a backstop with Glen and Chad.<br><br>
+          <strong>Highlight:</strong> Strong judgment on NBA combo liquidity, carousel naming, and trade-volume sort timing. Setting the tone for operational excellence.
+        </div>
+      </div>
+    </div>
+
+    <!-- ⚠️ ALERTS -->
+    <div class="tab-panel" id="panelAlerts">
+      <div class="section-label">Next 24 Hours</div>
+
+      <div class="item-card border-red" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag urgent">Critical</span>
+        <div class="card-title" style="margin-top:8px">WCF Game 3 — Multi-Player Injury Watch</div>
+        <div class="card-sub">SAS vs OKC · Multiple stars questionable</div>
+        <div class="card-detail">OKC/SAS G3 opened SAS -1.5 / 215. J-Dub (hamstring re-aggravation, 75% lean OUT — Cason starting), Fox (ruled OUT G2, 50/50 G3), Harper (hamstring, slight lean IN), Ajay Mitchell (quad, 50/50). Props suspended for several players. Wemby Quad Double down with injury news. Significant variance in player props — cards must be built carefully. McCain props held down (big gainer if J-Dub/Ajay out). SGA potentially returning to full 1Q minutes.</div>
+      </div>
+
+      <div class="item-card border-orange" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag review">Watch</span>
+        <div class="card-title" style="margin-top:8px">Soccer Sport Page — Performance Risk</div>
+        <div class="card-sub">Featured tab issues · Workaround needs multi-team coordination</div>
+        <div class="card-detail">Performance issues on the new soccer page's featured tab triggered the postponement. Workaround for WC requires updating Pop Nav icon, "More soccer" links, All Sports, and WC custom tabs — all before first week of June. Michael Thompson and Aashini are needed. Commercial, tech, and product aligned. Search will still route to old page.</div>
+      </div>
+
+      <div class="item-card border-orange" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag review">Watch</span>
+        <div class="card-title" style="margin-top:8px">SGP+ Feature Flag Enablement — Blocking Dual Display</div>
+        <div class="card-sub">Parlays & SGP on homepage simultaneously waiting on Nelson Campinho</div>
+        <div class="card-detail">Product confirmed no load implications for running SGP & Parlays simultaneously. Nelson Campinho needs to add the relevant bet types to the homepage feature flag. Once done, Merch Ops is free to start. SGP+ dependent on June 8 app release (7-leg bug + images bug fixes). Track this daily.</div>
+      </div>
+
+      <div class="item-card border-blue" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag info">FYI</span>
+        <div class="card-title" style="margin-top:8px">Parlay Hub US Decomm Investigation</div>
+        <div class="card-sub">Simon Stasiak checking with Raquel Ferreira on US-only decomm</div>
+        <div class="card-detail">Simon is investigating whether we can decomm Parlay Hub for US only — checking what benefits that provides for app performance and architecture simplification. Canada will get a separate A/B test. Results will inform broader parlay module strategy.</div>
+      </div>
+
+      <div class="item-card border-blue" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag info">FYI</span>
+        <div class="card-title" style="margin-top:8px">Friday: TBM Monthly Show & Tell</div>
+        <div class="card-sub">Tomorrow 10AM · Good visibility slot for Merch Ops</div>
+        <div class="card-detail">Purity Gitau's monthly Show & Tell for the SBK Transform Bet Merchandizing Pillar. Consider showcasing PPM Scorecard, SGP+ readiness, or experiment learnings (Combined SGP/Popular tab rollback insight). Good chance for cross-pillar recognition.</div>
+      </div>
+
+      <div class="item-card border-blue" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag info">FYI</span>
+        <div class="card-title" style="margin-top:8px">Mid-Year Conversations — Prep Window Opening</div>
+        <div class="card-sub">Manager training today, all-employee session tomorrow</div>
+        <div class="card-detail">Both sessions cover FanDuel's lightweight mid-year conversation process with Radical Candor framework. Start thinking about your direct reports' growth areas and impact narratives. Use this to frame upcoming 1:1s with Will, Aashini, Michael, Chad.</div>
+      </div>
+
+      <div class="item-card border-blue" onclick="toggle(this)">
+        <div class="expand-dot"></div>
+        <span class="priority-tag info">FYI</span>
+        <div class="card-title" style="margin-top:8px">World Cup Prep — Cross-Team Momentum Building</div>
+        <div class="card-sub">WC Competition Page live · Player pages being added · Rewards launching</div>
+        <div class="card-detail">WC Competition page is out and ready. Vlad Evdokimov's team adding WC player pages to the sportsbook app. FastTrack launching Sports Challenges, Sports Tournaments, and Match Day Predictor for WC. Alberta added to Canada SBK services. DDUI features + templates available for HP, event pages, and WC Competition page. Significant org-wide WC energy building.</div>
+      </div>
+    </div>
+
+    <!-- 🌟 WINS -->
+    <div class="tab-panel" id="panelWins">
+      <div class="section-label">Share with the Team</div>
+
+      <div class="win-card" onclick="toggle(this)">
+        <div class="win-icon">🏆</div>
+        <div class="win-title">Will Schleichert — PPM Weekly Scorecard</div>
+        <div class="win-sub">Built an internal dashboard that mirrors the SBK app UI — getting org-wide recognition</div>
+        <div class="win-detail">Zack named Will MVP of the Day and shared the tool to #merch_planning. The scorecard covers CVR, handle, GGR, avg $/bet, cards built in a carousel format, plus a Featured Players leaderboard and Wins of the Week tab. Chad called out the featured player carousel "actually works." Ryan Engler praised it. Sean Gorwara shouted it out. This is exactly the kind of AI-assisted internal tooling the team should be building more of. Live at willschleichert.github.io/ppm-weekly-scorecard.</div>
+      </div>
+
+      <div class="win-card" onclick="toggle(this)">
+        <div class="win-icon">⭐</div>
+        <div class="win-title">Dylan Mendelowitz — Operational Excellence</div>
+        <div class="win-sub">MVP of the Day for driving Sanity setup discipline</div>
+        <div class="win-detail">Dylan posted a sharp, constructive @channel message with a clear nightly checklist (Carousel, auto-pub, combos in pop nav), called out misses without finger-pointing, and offered himself, Glen, and Chad as a backstop. Backed it up all day with calm judgment on NBA combo liquidity, carousel naming, and trade-volume sort timing. Setting the standard for how ops should run.</div>
+      </div>
+
+      <div class="win-card" onclick="toggle(this)">
+        <div class="win-icon">🎉</div>
+        <div class="win-title">Shawn Brooker — 13 Years at FanDuel</div>
+        <div class="win-sub">Will Eklund celebrated the milestone in #merchops</div>
+        <div class="win-detail">A great moment for the team — Shawn Brooker officially reached 13 years with the company. Will's message: "We're honored to have inherited you, even if we had to wait 12.99 years to do so." A nice touch of team culture and recognition.</div>
+      </div>
+
+      <div class="win-card" onclick="toggle(this)">
+        <div class="win-icon">⚽</div>
+        <div class="win-title">Arsenal Win the EPL — Team Vibes High</div>
+        <div class="win-sub">First time in 22 years · Ryan Hardgrove on cloud nine</div>
+        <div class="win-detail">Arsenal won the EPL Championship for the first time in 22 years. Ryan Hardgrove: "Arsenal jersey on and not coming off for the rest of the week." Michael Thompson: "Newcastle didn't win???" Good team energy and a talking point across the merch ops floor. A nice reminder of why the team loves working in sports.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-panel="panelToday" onclick="switchTab(this)">
+      <span class="tab-icon">📅</span>Today
+    </button>
+    <button class="tab-btn" data-panel="panelActions" onclick="switchTab(this)">
+      <span class="tab-icon">🎯</span>Actions
+    </button>
+    <button class="tab-btn" data-panel="panelTeam" onclick="switchTab(this)">
+      <span class="tab-icon">👥</span>Team
+    </button>
+    <button class="tab-btn" data-panel="panelAlerts" onclick="switchTab(this)">
+      <span class="tab-icon">⚠️</span>Alerts
+    </button>
+    <button class="tab-btn" data-panel="panelWins" onclick="switchTab(this)">
+      <span class="tab-icon">🌟</span>Wins
+    </button>
+  </div>
+
+</div>
+</div>
+
+<script>
+// PASSWORD
+const pw = 'merchops2026';
+const lockScreen = document.getElementById('lockScreen');
+const pwInput = document.getElementById('pwInput');
+
+pwInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (pwInput.value === pw) {
+      lockScreen.classList.add('hidden');
+      sessionStorage.setItem('merchAuth','1');
+    } else {
+      pwInput.classList.add('error');
+      pwInput.value = '';
+      setTimeout(() => pwInput.classList.remove('error'), 500);
+    }
+  }
+});
+
+if (sessionStorage.getItem('merchAuth') === '1') {
+  lockScreen.classList.add('hidden');
+} else {
+  pwInput.focus();
+}
+
+// CLOCK
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:false });
+}
+updateClock();
+setInterval(updateClock, 10000);
+
+// TAB SWITCHING
+function switchTab(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(btn.dataset.panel).classList.add('active');
+  document.getElementById('contentArea').scrollTop = 0;
+}
+
+// EXPAND/COLLAPSE
+function toggle(card) {
+  card.classList.toggle('expanded');
+}
+</script>
+
+</body>
+</html>
